@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>寶可夢大師大考驗</title>
+    <title>寶可夢大師大考驗 - 絲滑順暢版</title>
     <style>
         :root {
             --primary-color: #ef5350;
             --secondary-color: #3d7dca;
             --bg-color: #f0f2f5;
+            --wrong-red: #ff5252;
         }
         body {
             font-family: "Microsoft JhengHei", sans-serif;
@@ -28,8 +29,36 @@
             text-align: center;
             width: 350px;
             position: relative;
+            transition: transform 0.2s;
         }
-        /* 啟動遮罩 */
+
+        /* 錯誤搖晃動畫 */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-10px); }
+            40%, 80% { transform: translateX(10px); }
+        }
+        .shake-error {
+            animation: shake 0.4s ease-in-out;
+            border: 4px solid var(--wrong-red) !important;
+        }
+
+        /* 錯誤提示框 */
+        #error-overlay {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--wrong-red);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            z-index: 20;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            white-space: nowrap;
+        }
+
         #start-mask {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -39,73 +68,19 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 10;
+            z-index: 30;
         }
-        .question-text {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 20px;
-        }
-        .img-container {
-            height: 200px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        #pokemon-img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            transition: opacity 0.3s;
-        }
-        .options-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-        }
+        .question-text { font-size: 1.5rem; font-weight: bold; color: #333; margin-bottom: 20px; }
+        .img-container { height: 200px; display: flex; justify-content: center; align-items: center; margin-bottom: 20px; }
+        #pokemon-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .option-btn {
-            padding: 12px 5px;
-            border: 2px solid #eee;
-            border-radius: 12px;
-            background: white;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            transition: all 0.2s;
+            padding: 12px 5px; border: 2px solid #eee; border-radius: 12px;
+            background: white; cursor: pointer; font-size: 1rem; font-weight: bold; transition: all 0.2s;
         }
-        .option-btn:hover {
-            background-color: var(--secondary-color);
-            color: white;
-            border-color: var(--secondary-color);
-        }
-        .progress {
-            margin-top: 25px;
-            color: #888;
-            font-size: 0.8rem;
-        }
-        #congrats-overlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(61, 125, 202, 0.95);
-            color: white;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-        .start-btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.2rem;
-            border-radius: 50px;
-            cursor: pointer;
-            font-weight: bold;
-        }
+        .option-btn:hover:not(:disabled) { background-color: var(--secondary-color); color: white; border-color: var(--secondary-color); }
+        .progress { margin-top: 25px; color: #888; font-size: 0.8rem; }
+        .start-btn { background: var(--primary-color); color: white; border: none; padding: 15px 30px; border-radius: 50px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -116,119 +91,127 @@
 
     <div class="game-card" id="game-ui">
         <div id="start-mask">
-            <h2 style="color:var(--primary-color)">準備好了嗎？</h2>
-            <button class="start-btn" onclick="startGame()">點擊開始 (含音樂)</button>
+            <h2 style="color:var(--primary-color)">精靈寶可夢大考驗</h2>
+            <button class="start-btn" onclick="startGame()">點擊開始</button>
         </div>
+
+        <div id="error-overlay"></div>
 
         <div class="question-text">這隻寶可夢叫什麼？</div>
         <div class="img-container">
-            <img id="pokemon-img" src="" alt="">
+            <img id="pokemon-img" src="" alt="loading...">
         </div>
         
         <div class="options-grid" id="options"></div>
 
-        <div class="progress">進度：<span id="score">0</span> / 10 <br> (剩餘未出現寶可夢：<span id="remaining">151</span>)</div>
-    </div>
-
-    <div id="congrats-overlay">
-        <h1>太強了！全對！</h1>
-        <p>你簡直是寶可夢大師！</p>
-        <button onclick="location.reload()" style="margin-top:20px; padding: 10px 30px; cursor:pointer; border-radius: 20px; border:none;">再玩一次</button>
+        <div class="progress">成功：<span id="score">0</span> / 10 | 剩餘池：<span id="remaining">151</span></div>
     </div>
 
     <script>
         let score = 0;
-        const targetScore = 10;
         let isProcessing = false;
-        
-        // 建立 1 到 151 的數字池，確保不重複
         let availableIds = Array.from({length: 151}, (_, i) => i + 1);
+        let preloadedData = null; // 儲存預載的下一題
 
-        function startGame() {
+        async function startGame() {
             document.getElementById('start-mask').style.display = 'none';
-            const music = document.getElementById('bg-music');
-            music.volume = 0.3; // 音量調小一點
-            music.play();
-            loadLevel();
+            document.getElementById('bg-music').volume = 0.2;
+            document.getElementById('bg-music').play();
+            
+            // 初始化：先抓好第一題的資料
+            await prepareNextLevel(); 
+            displayLevel();
         }
 
-        async function getPokemon(id) {
+        async function fetchPokemonData(id) {
             try {
-                const speciesRes = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}/`);
-                const speciesData = await speciesRes.json();
-                const pokemonRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}/`);
-                const pokemonData = await pokemonRes.json();
-                
-                const nameObj = speciesData.names.find(n => n.language.name === "zh-Hant") || 
-                                speciesData.names.find(n => n.language.name === "zh-Hans");
-                
-                const img = pokemonData.sprites.other['official-artwork'].front_default;
-                return { name: nameObj.name, img: img };
+                const [speciesRes, pokemonRes] = await Promise.all([
+                    fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}/`),
+                    fetch(`https://pokeapi.co/api/v2/pokemon/${id}/`)
+                ]);
+                const species = await speciesRes.json();
+                const pokemon = await pokemonRes.json();
+                const name = species.names.find(n => n.language.name === "zh-Hant")?.name || "未知";
+                const img = pokemon.sprites.other['official-artwork'].front_default;
+                return { name, img };
             } catch (e) { return null; }
         }
 
-        async function loadLevel() {
-            if (score >= targetScore) {
-                showCongrats();
-                return;
-            }
-
-            isProcessing = true;
-            const optionsDiv = document.getElementById('options');
-            const imgElement = document.getElementById('pokemon-img');
-            imgElement.style.opacity = "0";
-
-            // 從數字池中隨機取出一個 ID 並移除它 (保證不重複)
+        // 預拉取下一題：核心優化點
+        async function prepareNextLevel() {
+            if (availableIds.length === 0) return;
             const randomIndex = Math.floor(Math.random() * availableIds.length);
             const correctId = availableIds.splice(randomIndex, 1)[0];
             
-            document.getElementById('remaining').innerText = availableIds.length;
-
-            const correctPoke = await getPokemon(correctId);
-
-            // 隨機選 3 個錯誤答案 (錯誤答案可以從 151 以外或池子裡隨便選，不影響主 ID 不重複)
+            const correctPoke = await fetchPokemonData(correctId);
             let choices = [correctPoke.name];
+            
             while (choices.length < 4) {
-                const randomId = Math.floor(Math.random() * 151) + 1;
-                const randomPoke = await getPokemon(randomId);
-                if (randomPoke && !choices.includes(randomPoke.name)) {
-                    choices.push(randomPoke.name);
-                }
+                const randId = Math.floor(Math.random() * 151) + 1;
+                const p = await fetchPokemonData(randId);
+                if (p && !choices.includes(p.name)) choices.push(p.name);
             }
-
             choices.sort(() => Math.random() - 0.5);
 
-            imgElement.src = correctPoke.img;
-            imgElement.onload = () => { imgElement.style.opacity = "1"; };
+            preloadedData = { ...correctPoke, choices };
             
+            // 預載圖片到快取
+            const imgCache = new Image();
+            imgCache.src = correctPoke.img;
+        }
+
+        function displayLevel() {
+            if (score >= 10) {
+                alert("恭喜！你已成為寶可夢大師！");
+                location.reload();
+                return;
+            }
+
+            const data = preloadedData;
+            const optionsDiv = document.getElementById('options');
+            const imgElement = document.getElementById('pokemon-img');
+
+            imgElement.src = data.img;
             optionsDiv.innerHTML = "";
-            choices.forEach(name => {
+            data.choices.forEach(name => {
                 const btn = document.createElement('button');
                 btn.className = 'option-btn';
                 btn.innerText = name;
-                btn.onclick = () => checkAnswer(name, correctPoke.name);
+                btn.onclick = () => checkAnswer(name, data.name);
                 optionsDiv.appendChild(btn);
             });
-            isProcessing = false;
+
+            document.getElementById('remaining').innerText = availableIds.length;
+            
+            // 顯示當前題目的同時，非同步準備下一題
+            prepareNextLevel();
         }
 
         function checkAnswer(selected, actual) {
             if (isProcessing) return;
+            isProcessing = true;
+
+            const card = document.getElementById('game-ui');
+            const errorOverlay = document.getElementById('error-overlay');
 
             if (selected === actual) {
                 score++;
                 document.getElementById('score').innerText = score;
-                loadLevel();
+                isProcessing = false;
+                displayLevel();
             } else {
-                alert(`答錯了！那是 ${actual}。重新開始挑戰！`);
-                location.reload(); // 答錯重來，重置題目池
-            }
-        }
+                // 觸發搖晃與紅色外框
+                card.classList.add('shake-error');
+                errorOverlay.innerText = `答錯了！那是 ${actual}`;
+                errorOverlay.style.display = 'block';
 
-        function showCongrats() {
-            document.getElementById('game-ui').style.display = 'none';
-            document.getElementById('congrats-overlay').style.display = 'flex';
-            document.getElementById('bg-music').pause(); // 結束可以放勝利音樂
+                setTimeout(() => {
+                    card.classList.remove('shake-error');
+                    errorOverlay.style.display = 'none';
+                    isProcessing = false;
+                    displayLevel(); // 直接換題，不重來
+                }, 1200);
+            }
         }
     </script>
 </body>
